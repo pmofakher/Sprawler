@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sprawler"
+version = "1.0.0"
+description = "Business-Knowledge Web Crawler / Spider for Persian & International Sites (Optimized for RAG)"
+authors = [{ name = "Sprawler Team" }]
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.scripts]
+sprawler = "crawler.main:main"

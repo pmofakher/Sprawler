@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+  sprawler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sprawler-crawler
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - SPRAWLER_DATA_DIR=/app/data
+      - SPRAWLER_API_HOST=0.0.0.0
+      - SPRAWLER_API_PORT=8000
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./data:/app/data
+    # 2GB shared memory required by Chromium to prevent page crashes during heavy DOM rendering
+    shm_size: "2gb"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
