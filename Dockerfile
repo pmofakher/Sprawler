@@ -20,9 +20,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install python packages
+# Copy requirements, local wheels, and install python packages
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY wheels/ /app/wheels/
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install \
+    --find-links=/app/wheels \
+    -i https://mirrors.aliyun.com/pypi/simple/ \
+    --trusted-host mirrors.aliyun.com \
+    --default-timeout 180 \
+    --retries 10 \
+    -r requirements.txt
 
 # Ensure Chromium browser binary is present
 RUN playwright install chromium
