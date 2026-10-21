@@ -145,9 +145,11 @@ docker compose logs -f
 
 ## 📡 API Usage & Endpoints
 
-### 1. Start a Crawl Job
+### The Sprawl Endpoint (`POST /sprawl`)
+Unified endpoint to spider and crawl a website or link, extract business knowledge, and save the resulting JSON documents.
+
 ```bash
-curl -X POST "http://localhost:8000/crawl" \
+curl -X POST "http://localhost:8000/sprawl" \
      -H "Content-Type: application/json" \
      -d '{
        "url": "https://plantlandtehran.com/",
@@ -157,36 +159,32 @@ curl -X POST "http://localhost:8000/crawl" \
        "force_browser": false
      }'
 ```
-**Response:**
+
+You can pass either `"url"` (e.g. `"https://plantlandtehran.com/"`) or `"domain"` (e.g. `"plantlandtehran.com"`).
+
+**Response (HTTP 200):**
 ```json
 {
+  "status": "completed",
   "job_id": "7f8b9e61-a083-4a1e-bce1-3c5e8840c8f1",
-  "status": "running",
-  "url": "https://plantlandtehran.com/"
+  "domain": "plantlandtehran.com",
+  "url": "https://plantlandtehran.com/",
+  "output_file": "/app/data/plantlandtehran.com/site.json",
+  "report_file": "/app/data/plantlandtehran.com/report.json",
+  "pages_crawled": 42,
+  "duration_seconds": 18.4,
+  "site": { ... },
+  "business": {
+    "phones": [ ... ],
+    "emails": [ ... ],
+    "social": [ ... ],
+    "working_hours": [ ... ]
+  },
+  "pages": [ ... ],
+  "skipped": [ ... ]
 }
 ```
 
-### 2. Check Job Status & Live Metrics
-```bash
-curl "http://localhost:8000/crawl/7f8b9e61-a083-4a1e-bce1-3c5e8840c8f1"
-```
-
-### 3. Retrieve Final Knowledge JSON (`site.json`)
-```bash
-curl "http://localhost:8000/crawl/7f8b9e61-a083-4a1e-bce1-3c5e8840c8f1/result"
-```
-
-### 4. Retrieve Coverage & Audit Report (`report.json`)
-```bash
-curl "http://localhost:8000/crawl/7f8b9e61-a083-4a1e-bce1-3c5e8840c8f1/report"
-```
-
-### 5. Inspect a URL Diagnostically (Zero Crawling)
-```bash
-curl -X POST "http://localhost:8000/analyze/url" \
-     -H "Content-Type: application/json" \
-     -d '{"url": "https://plantlandtehran.com/"}'
-```
 
 ---
 

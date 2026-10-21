@@ -19,3 +19,5 @@ pytesseract==0.3.13
 python-multipart==0.0.12
 pytest==8.3.3
 pytest-asyncio==0.24.0
+pysocks==1.7.1
+socksio==1.0.0
