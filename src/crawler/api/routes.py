@@ -1,8 +1,10 @@
 """FastAPI API routes defining the unified /sprawl endpoint."""
 
 import time
+from typing import Optional
+from urllib.parse import urlparse
 import uuid
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 
 from crawler.api.schemas import HealthResponse, SprawlRequest, SprawlResponse
 from crawler.core.config import settings
@@ -32,7 +34,16 @@ async def health_check() -> HealthResponse:
     tags=["Sprawl"],
     summary="Sprawl (Spider & Crawl) a domain or link and save JSON",
 )
-async def sprawl(request: SprawlRequest) -> SprawlResponse:
+async def sprawl(
+    url: str = Query(..., description="Target website link"),
+    domain: Optional[str] = Query(default=None, description="Target domain name (auto-derived if empty)"),
+    max_pages: int = Query(default=50, ge=1, le=10000, description="Max pages to crawl"),
+    max_depth: int = Query(default=3, ge=0, le=10, description="Max crawl depth"),
+    allow_subdomains: bool = Query(default=True, description="Whether subdomains are in scope for crawling"),
+    force_browser: bool = Query(default=False, description="Force Chromium Playwright rendering for all pages"),
+    use_crtsh: bool = Query(default=False, description="Query crt.sh certificate transparency logs for subdomains"),
+    output_filename: str = Query(default="site.json", description="Custom filename for the saved JSON file"),
+) -> SprawlResponse:
     """Unified endpoint to spider and crawl a domain or link.
 
     - Resolves and normalizes the target domain or URL
@@ -41,11 +52,28 @@ async def sprawl(request: SprawlRequest) -> SprawlResponse:
     - Automatically saves the atomic `site.json` and `report.json` files to disk
     - Returns the aggregated knowledge JSON and the file paths where it was saved
     """
+    if not domain or not domain.strip():
+        parsed = urlparse(url if "://" in url else f"https://{url}")
+        derived = parsed.netloc.split(":")[0].lower()
+        domain = derived if derived else None
+
+    # Reconstruct the internal request/config object
+    request = SprawlRequest(
+        url=url,
+        domain=domain,
+        max_pages=max_pages,
+        max_depth=max_depth,
+        allow_subdomains=allow_subdomains,
+        force_browser=force_browser,
+        use_crtsh=use_crtsh,
+        output_filename=output_filename,
+    )
+
     raw_target = request.url or request.domain
     if not raw_target or not raw_target.strip():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Either 'url' or 'domain' must be provided in the request body.",
+            detail="Either 'url' or 'domain' must be provided.",
         )
 
     target_str = raw_target.strip()
@@ -70,7 +98,7 @@ async def sprawl(request: SprawlRequest) -> SprawlResponse:
 
     job_id = str(uuid.uuid4())
     start_time = time.monotonic()
-    domain = get_registrable_domain(norm_url)
+    domain_reg = get_registrable_domain(norm_url)
 
     logger.info(f"Initiating sprawl for target '{norm_url}' (job_id: {job_id})")
 
@@ -94,7 +122,7 @@ async def sprawl(request: SprawlRequest) -> SprawlResponse:
         )
 
     duration = time.monotonic() - start_time
-    storage = SiteStorage(settings.data_dir, domain)
+    storage = SiteStorage(settings.data_dir, domain_reg)
 
     output_path = storage.site_json_path
     if request.output_filename:
@@ -113,7 +141,7 @@ async def sprawl(request: SprawlRequest) -> SprawlResponse:
     return SprawlResponse(
         status="completed",
         job_id=job_id,
-        domain=domain,
+        domain=domain_reg,
         url=norm_url,
         output_file=str(output_path.resolve()),
         report_file=str(storage.report_json_path.resolve()),
